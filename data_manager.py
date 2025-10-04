@@ -43,8 +43,13 @@ class DataManager:
         except Exception as e:
             raise ValueError(f"Invalid authentication token: {e}")
     def create_document(self, collection, doc_id, data):
-        self.db.collection(collection).document(doc_id).set(data)
-        return {"status":"success", "doc_id":doc_id}
+        if doc_id:
+            # use custom document id
+            self.db.collection(collection).document(doc_id).set(data)
+        else:
+            # let Firestore generate a random document id
+            self.db.collection(collection).add(data)
+        return {"status": "success", "doc_id": doc_id or "auto-generated"}
     def query_collection(self, collection: str, field: str, op: str, value: str):
         """
         Query documents in a Firestore collection with a where filter.

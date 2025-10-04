@@ -59,6 +59,7 @@ def user_data():
         if request.method == "POST":
             body = request.json
             body["userId"]=uid
+            print(body)
             data_manager.create_document("videos", "", body)
             return jsonify({"status": "created"}), 201
         elif request.method == "GET":
