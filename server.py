@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from ultralytics import YOLO
 from analyze import analyze_video
 from data_manager import DataManager
-app=Flask(__name__)#creates a flask server on variabel app
+app=Flask(__name__)#creates a flask server on variable app
 app.config["UPLOAD_FOLDER"]="uploads"
 OUTPUT_IMAGE="static/output.jpg"
 model=YOLO("model.pt")
@@ -58,8 +58,13 @@ def user_data():
         uid = decoded["uid"]
         if request.method == "POST":
             body = request.json
-            data_manager.create_document("users", uid, body)
+            body["userId"]=uid
+            data_manager.create_document("videos", "", body)
             return jsonify({"status": "created"}), 201
+        elif request.method == "GET":
+            # fetch all documents with userId == uid
+            docs = data_manager.query_collection("videos", "userId", "==", uid)
+            return jsonify(docs), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 401
 

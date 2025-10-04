@@ -45,3 +45,16 @@ class DataManager:
     def create_document(self, collection, doc_id, data):
         self.db.collection(collection).document(doc_id).set(data)
         return {"status":"success", "doc_id":doc_id}
+    def query_collection(self, collection: str, field: str, op: str, value: str):
+        """
+        Query documents in a Firestore collection with a where filter.
+        Example: query_collection("users", "userId", "==", uid)
+        """
+        try:
+            docs = self.db.collection(collection).where(field, op, value).stream()
+            results = []
+            for doc in docs:
+                results.append({"id": doc.id, **doc.to_dict()})
+            return results
+        except Exception as e:
+            raise ValueError(f"Error querying collection: {e}")

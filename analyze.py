@@ -25,6 +25,7 @@ def analyze_video(video_path):
             results2frame=results2[0].plot()
             results1frame=cv2.addWeighted(results1frame, 1, results2frame, 1, 0)
             out.write(results1frame)
+            #combines different layers of detection
             
         else:
             break
