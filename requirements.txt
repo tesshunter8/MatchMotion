@@ -2,3 +2,4 @@ flask
 ultralytics
 firebase-admin
 gunicorn
+python-dotenv

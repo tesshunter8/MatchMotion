@@ -5,11 +5,16 @@ from werkzeug.utils import secure_filename
 from ultralytics import YOLO
 from analyze import analyze_video
 from data_manager import DataManager
+from dotenv import load_dotenv
+
+load_dotenv()
+
 app=Flask(__name__)#creates a flask server on variable app
 app.config["UPLOAD_FOLDER"]="uploads"
 OUTPUT_IMAGE="static/output.jpg"
 model=YOLO("model.pt")
 SERVICE_ACCOUNT_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+print(SERVICE_ACCOUNT_PATH)
 cred_dict = json.loads(SERVICE_ACCOUNT_PATH)
 FIREBASE_API_KEY = "AIzaSyARs60WidQXyaLfwjnfV5xfb6iYIMWohQI"  # from Firebase Console > Project Settings > Web API Key
 data_manager = DataManager(cred_dict, FIREBASE_API_KEY)
