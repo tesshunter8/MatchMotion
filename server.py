@@ -1,3 +1,4 @@
+import json
 from flask import Flask, render_template, request, jsonify
 import os
 from werkzeug.utils import secure_filename
@@ -9,8 +10,9 @@ app.config["UPLOAD_FOLDER"]="uploads"
 OUTPUT_IMAGE="static/output.jpg"
 model=YOLO("model.pt")
 SERVICE_ACCOUNT_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+cred_dict = json.loads(SERVICE_ACCOUNT_PATH)
 FIREBASE_API_KEY = "AIzaSyARs60WidQXyaLfwjnfV5xfb6iYIMWohQI"  # from Firebase Console > Project Settings > Web API Key
-data_manager = DataManager(SERVICE_ACCOUNT_PATH, FIREBASE_API_KEY)
+data_manager = DataManager(cred_dict, FIREBASE_API_KEY)
 @app.route("/upload", methods=["GET", "POST"])
 def upload_video():
     if request.method == "POST":
