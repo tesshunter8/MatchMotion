@@ -32,6 +32,14 @@ class DataManager:
             return r.json()
         else:
             raise ValueError(f"Login failed: {r.json()}")
+    def logout_user(self, id_token):
+        try:
+            decoded_token =self.verify_user(id_token)
+            uid = decoded_token["uid"]
+            auth.revoke_refresh_tokens(uid)
+            return {"status": "success", "message": "User signed out (tokens revoked)."}
+        except Exception as e:
+            raise ValueError(f"Error signing out user: {e}")
     def verify_user(self, id_token: str):
         """
         Verifies a Firebase Auth ID token.

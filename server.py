@@ -47,6 +47,17 @@ def login():
         return jsonify(tokens), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 401
+@app.route("/auth/logout", methods=["POST"])
+def logout():
+    try:
+        id_token = request.json.get("idToken")
+        if not id_token:
+            return jsonify({"error": "Missing idToken"}), 400
+
+        result = data_manager.sign_out_user(id_token)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 401
 @app.route("/user/data", methods=["GET", "POST", "PATCH", "DELETE"])
 def user_data():
     auth_header = request.headers.get("Authorization")
