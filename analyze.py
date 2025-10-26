@@ -5,7 +5,7 @@ from pathlib import Path
 model=YOLO("models/best50.pt")
 modelshuttle=YOLO("models/bestshuttle.pt")
 modelcourt=YOLO("models/courtseg50.pt")
-STOP_THRESHOLD_FRAMES=10 #number of frames needed to determine point/fault of shuttle
+STOP_THRESHOLD_FRAMES=15 #number of frames needed to determine point/fault of shuttle
 BOUNDING_BOX_OFFSET=5
 def check_overlap(boxA, boxB):
     xA = max(boxA[0], boxB[0])
@@ -38,8 +38,33 @@ def track_shuttle(detections, shuttle_box, stop_counter):
     return shuttle_box, stop_counter, stop
 
 def shuttle_point(court_bounds, shuttle_pos):
-    x=(shuttle_pos[0]+shuttle_pos[2])//2
-    y=(shuttle_pos[1]+shuttle_pos[3])//2
+    x=int((shuttle_pos[0]+shuttle_pos[2])//2)
+    y=int((shuttle_pos[1]+shuttle_pos[3])//2)
+    masks = court_bounds.masks.data  # list of N masks (each shape [H, W])
+    names = court_bounds.names
+    boxes = court_bounds.boxes
+    regions = []
+    
+    for i, mask in enumerate(masks):
+        cls_id = int(boxes.cls[i].item())
+        label = names[cls_id]
+        conf = boxes.conf[i].item()
+        print (label)
+        # Convert mask to numpy
+        mask_np = mask.cpu().numpy()
+
+        # Check if shuttle center (x, y) is inside this mask
+        print(f"y: {y}, x: {x}, mask_np.shape[0]: {mask_np.shape[0]}, mask_np.shape[1]: {mask_np.shape[1]}, mask_np[y,x]: {mask_np[y,x]}")
+        if y < mask_np.shape[0] and x < mask_np.shape[1]:
+        
+            if mask_np[y, x] > 0.5:  # pixel belongs to region
+                regions.append((label, conf))
+
+    if regions:
+        # If shuttle center is inside one or more regions
+        print(f"Shuttle is inside region(s): {[r[0] for r in regions]}")
+    else:
+        print("Shuttle is not inside any known region.")
 
     for d in court_bounds.boxes:
         x1, y1, x2, y2 = d.xyxy[0].tolist()
