@@ -8,7 +8,7 @@ def train():
     model=YOLO("yolov8s.pt")
     model.train(
         data="C:/Users/lenovo/Desktop/badminton players/data.yaml",
-        epochs=50, 
+        epochs=10, 
         imgsz=640,
         device=0
         )

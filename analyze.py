@@ -2,11 +2,16 @@ from ultralytics import YOLO
 import cv2
 import os
 from pathlib import Path
-model=YOLO("models/best50.pt")
+model=YOLO("models/people10.pt")
 modelshuttle=YOLO("models/bestshuttle.pt")
 modelcourt=YOLO("models/courtseg50.pt")
 STOP_THRESHOLD_FRAMES=15 #number of frames needed to determine point/fault of shuttle
 BOUNDING_BOX_OFFSET=5
+
+def draw_path(frame, path, color):
+    for coord in path:
+        cv2.circle(frame, coord, 10, color, 1)
+    return frame
 def check_overlap(boxA, boxB):
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
@@ -54,7 +59,7 @@ def shuttle_point(court_bounds, shuttle_pos):
         mask_np = mask.cpu().numpy()
 
         # Check if shuttle center (x, y) is inside this mask
-        print(f"y: {y}, x: {x}, mask_np.shape[0]: {mask_np.shape[0]}, mask_np.shape[1]: {mask_np.shape[1]}, mask_np[y,x]: {mask_np[y,x]}")
+        #print(f"y: {y}, x: {x}, mask_np.shape[0]: {mask_np.shape[0]}, mask_np.shape[1]: {mask_np.shape[1]}, mask_np[y,x]: {mask_np[y,x]}")
         if y < mask_np.shape[0] and x < mask_np.shape[1]:
         
             if mask_np[y, x] > 0.5:  # pixel belongs to region
@@ -65,6 +70,11 @@ def shuttle_point(court_bounds, shuttle_pos):
         print(f"Shuttle is inside region(s): {[r[0] for r in regions]}")
     else:
         print("Shuttle is not inside any known region.")
+    isAboveNet(court_bounds, shuttle_pos)
+
+def isAboveNet(court_bounds, object_pos):
+    x=int((object_pos[0]+object_pos[2])//2)
+    y=int((object_pos[1]+object_pos[3])//2)
 
     for d in court_bounds.boxes:
         x1, y1, x2, y2 = d.xyxy[0].tolist()
@@ -73,9 +83,16 @@ def shuttle_point(court_bounds, shuttle_pos):
         label = court_bounds.names[cls_id]  # class name
         if label == "net":
             if y>y2:
-                print("below")
+                return False
             else:
-                print("above")
+                return True
+def shot_number(top_hits, bottom_hits, player_pos, shuttle_pos, court_bounds):
+    if check_overlap(player_pos,shuttle_pos)>0.5:
+        if isAboveNet(court_bounds, player_pos): 
+            top_hits+=1
+        else: 
+            bottom_hits+=1
+    return top_hits, bottom_hits 
 def analyze_video(video_path):
     video_stem=Path(video_path).stem
     stream=cv2.VideoCapture(video_path) #setup stream to analyze each frame of video
@@ -95,6 +112,13 @@ def analyze_video(video_path):
     stop_counter=0
     #court bounds
     court_bounds={}
+    #player positions
+    top_pos=[]
+    bottom_pos=[]
+    shuttle_pos=[]
+    #track player shuttle hits
+    top_hits=0
+    bottom_hits=0
     #analyze each frame
     while True:
         ret, frame=stream.read()
@@ -123,6 +147,8 @@ def analyze_video(video_path):
                         name="shuttle"
                     detections.append((x1,y1,x2,y2,conf,name))
             merged_detections=[]
+            shuttle_in_frame=()
+            person_in_frame=()
             for d in sorted(detections, key=lambda x:x[4], reverse=True):
                 x1,y1,x2,y2,conf,name=d
                 if name == "shuttle":
@@ -131,12 +157,28 @@ def analyze_video(video_path):
                     for md in merged_detections:
                         if md[5] == "shuttle" and check_overlap((x1, y1, x2, y2), (md[0], md[1], md[2], md[3])) > 0.5:
                             overlap = True
+                            shuttle_in_frame=(md[0], md[1], md[2], md[3])
                             break
                     if overlap:
                         continue  # skip duplicate
+                if name=="person":
+                    person_in_frame=(x1,y1,x2,y2)
+                    x=int((x1+x2)//2)
+                    y=int((y1+y2)//2)
+                    if isAboveNet(court_bounds, (x1, y1, x2, y2)):
+                        top_pos.append((x, y))
+                    else:
+                        bottom_pos.append((x, y))
+                
                 merged_detections.append(d)
+            if shuttle_in_frame and person_in_frame:
+                top_hits, bottom_hits=shot_number(top_hits, bottom_hits, person_in_frame, shuttle_in_frame, court_bounds)
+                print ("hits:",top_hits, bottom_hits)
             shuttle_box, stop_counter, stop=track_shuttle(merged_detections, shuttle_box, stop_counter)
             s=shuttle_box
+            x=int((s[0]+s[2])//2)
+            y=int((s[1]+s[3])//2)
+            shuttle_pos.append((x,y))
             merged_detections.append((s[0],s[1],s[2],s[3],1,"shuttle_box"))
             for (x1,y1,x2,y2,conf,name) in merged_detections: 
                 color = (0, 255, 0) if name == "shuttle" else (255, 0, 0)
@@ -164,7 +206,9 @@ def analyze_video(video_path):
                     cv2.LINE_AA               # anti-alias for smoother text
                 )
                 shuttle_point(court_bounds, shuttle_box)
-
+            draw_path(frame, top_pos, (0, 0, 255))
+            draw_path(frame, bottom_pos, (255, 0, 0))
+            draw_path(frame, shuttle_pos, (0,0,0))
             out.write(frame)
         else:
             break
