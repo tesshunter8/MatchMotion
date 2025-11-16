@@ -12,7 +12,7 @@ model=YOLO("model.pt")
 SERVICE_ACCOUNT_PATH = "service_account.json"
 FIREBASE_API_KEY = "AIzaSyARs60WidQXyaLfwjnfV5xfb6iYIMWohQI"  # from Firebase Console > Project Settings > Web API Key
 VIDEO_DB = {}
-data_manager = DataManager(SERVICE_ACCOUNT_PATH, FIREBASE_API_KEY)
+data_manager = DataManager(SERVICE_ACCOUNT_PATH, FIREBASE_API_KEY, "matchmotion-56add")
 @app.route("/upload", methods=["GET", "POST"])
 def upload_video():
     if request.method == "POST":
@@ -27,10 +27,12 @@ def upload_video():
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], video_id)
             file.save(filepath)
             # Run YOLO
-            analyze_video(filepath)
+            results=analyze_video(filepath)
+
+        
             # Store mapping
             VIDEO_DB[video_id] = filename
-
+            data_manager.create_document("videos", "", results)
 
             return jsonify({
                 "message": "Upload successful",
@@ -80,28 +82,54 @@ def logout():
         return jsonify(result), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 401
-@app.route("/user/data", methods=["GET", "POST", "PATCH", "DELETE"])
+@app.route("/user/data", methods=["GET", "POST"])
 def user_data():
+    # -----------------------------
+    # Auth
+    # -----------------------------
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         return jsonify({"error": "Missing Authorization header"}), 401
+
     try:
-        token = auth_header.split(" ")[1]  # "Bearer <idToken>"
+        token = auth_header.split(" ")[1]  # Expect "Bearer <idToken>"
         decoded = data_manager.verify_user(token)
         uid = decoded["uid"]
+
+        # -----------------------------
+        # CREATE DOCUMENT
+        # -----------------------------
         if request.method == "POST":
             body = request.json
-            body["userId"]=uid
-            data_manager.create_document("videos", "", body)
-            return jsonify({"status": "created"}), 201
+            if not body:
+                return jsonify({"error": "Missing request body"}), 400
+
+            body["userId"] = uid
+            result = data_manager.create_document("videos", "", body)  # auto-generate doc ID
+            return jsonify({"status": "created", "doc_id": result["doc_id"]}), 201
         elif request.method == "GET":
-            # fetch all documents with userId == uid
             docs = data_manager.query_collection("videos", "userId", "==", uid)
-            return jsonify(docs), 200
+            # Optional: decode Firestore fields into plain Python dicts
+            decoded_docs = []
+            for doc in docs:
+                fields = {}
+                for k, v in doc["fields"].items():
+                    # decode basic types
+                    if "stringValue" in v:
+                        fields[k] = v["stringValue"]
+                    elif "integerValue" in v:
+                        fields[k] = int(v["integerValue"])
+                    elif "doubleValue" in v:
+                        fields[k] = float(v["doubleValue"])
+                    elif "booleanValue" in v:
+                        fields[k] = v["booleanValue"]
+                    elif "mapValue" in v:
+                        # optional: flatten mapValue recursively
+                        fields[k] = v["mapValue"]["fields"]
+                decoded_docs.append({"id": doc["id"], **fields})
+        return jsonify(decoded_docs), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 401
-
-
 
 if __name__=="__main__": 
     app.run(debug=True, host="0.0.0.0", port=5000)
