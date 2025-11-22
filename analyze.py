@@ -307,6 +307,7 @@ def analyze_video(video_path):
         "winner":winner,
         "rally_length":top_hits+bottom_hits,
         "analyzed_video_path":output_video,
-        "video_length":framestotal/30
+        "video_length":framestotal/30,
+        "output_path": str(output_video.as_posix())
 
     } 

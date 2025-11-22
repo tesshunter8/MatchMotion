@@ -29,6 +29,9 @@ def upload_video():
             # Run YOLO
             results=analyze_video(filepath)
 
+            
+            response=data_manager.upload_to_storage(results["output_path"])
+            print (response)
         
             # Store mapping
             VIDEO_DB[video_id] = filename

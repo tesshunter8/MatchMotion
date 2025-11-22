@@ -1,6 +1,7 @@
 import requests
 import firebase_admin
 from firebase_admin import credentials, auth
+import urllib
 
 
 class DataManager:
@@ -19,6 +20,10 @@ class DataManager:
 
         self.query_url = (
             f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents:runQuery"
+        )
+
+        self.storage_url = (
+            f"https://firebasestorage.googleapis.com/v0/b/{project_id}.appspot.com/o?uploadType=media&name="
         )
 
     # -----------------------------
@@ -151,3 +156,13 @@ class DataManager:
                 results.append({"id": doc_id, "fields": fields})
 
         return results
+    def upload_to_storage(self, file_path):
+        file_binary=open(file_path, "rb").read()
+        headers = { "Content-Type": "video/mp4" }
+        encoded_url=urllib.parse.quote(file_path, safe='')
+        url=self.storage_url+"uploads%2FClip.mp4"
+        
+        print (url)
+        res=requests.post(url, data=file_binary, headers=headers)
+        response=res.json()
+        return response
