@@ -2,3 +2,6 @@
 service_account.json
 runs/
 static/output/
+env/
+__pycache__/
+.env

@@ -23,7 +23,7 @@ class DataManager:
         )
 
         self.storage_url = (
-            f"https://firebasestorage.googleapis.com/v0/b/{project_id}.appspot.com/o?uploadType=media&name="
+            f"https://firebasestorage.googleapis.com/v0/b/{project_id}.firebasestorage.app/o?uploadType=media&name="
         )
 
     # -----------------------------
@@ -160,7 +160,7 @@ class DataManager:
         file_binary=open(file_path, "rb").read()
         headers = { "Content-Type": "video/mp4" }
         encoded_url=urllib.parse.quote(file_path, safe='')
-        url=self.storage_url+"uploads%2FClip.mp4"
+        url=self.storage_url+encoded_url
         
         print (url)
         res=requests.post(url, data=file_binary, headers=headers)

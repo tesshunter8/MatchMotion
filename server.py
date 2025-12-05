@@ -5,13 +5,14 @@ from ultralytics import YOLO
 from analyze import analyze_video
 from data_manager import DataManager
 import uuid
+from datetime import datetime
+
 app=Flask(__name__)#creates a flask server on variable app
 app.config["UPLOAD_FOLDER"]="uploads"
 OUTPUT_IMAGE="static/output.jpg"
 model=YOLO("model.pt")
 SERVICE_ACCOUNT_PATH = "service_account.json"
 FIREBASE_API_KEY = "AIzaSyARs60WidQXyaLfwjnfV5xfb6iYIMWohQI"  # from Firebase Console > Project Settings > Web API Key
-VIDEO_DB = {}
 data_manager = DataManager(SERVICE_ACCOUNT_PATH, FIREBASE_API_KEY, "matchmotion-56add")
 @app.route("/upload", methods=["GET", "POST"])
 def upload_video():
@@ -23,18 +24,20 @@ def upload_video():
             return "No selected file"
         if file:
             video_id = str(uuid.uuid4())
-            filename = secure_filename(file.filename)
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], video_id)
             file.save(filepath)
             # Run YOLO
             results=analyze_video(filepath)
 
-            
+            # attach uid and name from app
+            results["userId"] = (data_manager.verify_user(request.form.get("userId")))["uid"]
+            results["name"] = request.form.get("name")
+            results["createdAt"] = datetime.now().isoformat()
+
             response=data_manager.upload_to_storage(results["output_path"])
             print (response)
         
             # Store mapping
-            VIDEO_DB[video_id] = filename
             data_manager.create_document("videos", "", results)
 
             return jsonify({
@@ -43,17 +46,6 @@ def upload_video():
             }), 200
     return render_template("index.html")
 
-
-    
-
-
-@app.route('/video/<video_id>', methods=['GET'])
-def get_video(video_id):
-    if video_id not in VIDEO_DB:
-        return jsonify({"error": "Video not found"}), 404
-
-    filename = VIDEO_DB[video_id]
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=False)
 @app.route("/auth/register", methods=["POST"])
 def register():
     body = request.json
