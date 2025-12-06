@@ -156,6 +156,23 @@ class DataManager:
                 results.append({"id": doc_id, "fields": fields})
 
         return results
+    def get_download_url(self, metadata):
+        try: 
+            bucket = metadata['bucket'] 
+            file_path =metadata['name'] 
+            token = metadata['downloadTokens']
+            encoded_file_path = urllib.parse.quote(file_path, safe='')
+            download_url = (
+                f"https://firebasestorage.googleapis.com/v0/b/"
+                f"{bucket}/o/"
+                f"{encoded_file_path}"
+                f"?alt=media&token={token}"
+            )
+            return download_url
+        
+        except KeyError as e:
+            print(f"Error: Missing expected key in metadata: {e}")
+            return ""
     def upload_to_storage(self, file_path):
         file_binary=open(file_path, "rb").read()
         headers = { "Content-Type": "video/mp4" }
@@ -165,4 +182,8 @@ class DataManager:
         print (url)
         res=requests.post(url, data=file_binary, headers=headers)
         response=res.json()
+        download_url=self.get_download_url(response)
+        response["url"]=download_url
         return response
+    
+            

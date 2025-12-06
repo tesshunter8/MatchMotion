@@ -36,7 +36,8 @@ def upload_video():
 
             response=data_manager.upload_to_storage(results["output_path"])
             print (response)
-        
+            results["url"]=response["url"]
+            print (results)
             # Store mapping
             data_manager.create_document("videos", "", results)
 

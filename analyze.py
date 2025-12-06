@@ -5,7 +5,7 @@ import numpy
 from pathlib import Path
 from shapely import Point, Polygon
 model=YOLO("models/people10.pt")
-modelshuttle=YOLO("models/bestshuttle.pt")
+modelshuttle=YOLO("models/shuttle70.pt")
 modelcourt=YOLO("models/courtseg50.pt")
 STOP_THRESHOLD_FRAMES=15 #number of frames needed to determine point/fault of shuttle
 BOUNDING_BOX_OFFSET=5
