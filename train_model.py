@@ -7,8 +7,8 @@ def train():
     print("Device name:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None")
     model=YOLO("yolov8s.pt")
     model.train(
-        data="C:/Users/lenovo/Desktop/badminton players/data.yaml",
-        epochs=10, 
+        data="C:/Users/lenovo/Desktop/badminton shuttle train/data.yaml",
+        epochs=70, 
         imgsz=640,
         device=0
         )
